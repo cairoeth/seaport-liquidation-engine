@@ -1,27 +1,43 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { OrderParameters } from "./ConsiderationStructs.sol";
+import { 
+    OrderParameters,
+    OfferItem,
+    ConsiderationItem,
+    Order
+} from "./ConsiderationStructs.sol";
+
+import {
+    OrderType,
+    BasicOrderType,
+    ItemType,
+    Side
+} from "./ConsiderationEnums.sol";
+
+import { ConsiderationInterface } from "../interfaces/ConsiderationInterface.sol";
 
 /**
  * @title Liquidation Engine
  * @author cairoeth
  * @notice Liquidation engine that can be inherited to run a Dutch auction
- *         for every ERC721 a contract receives.
+ *         for every ERC721 the contract receives.
  */
 contract LiquidationEngine {
+    uint256 internal globalSalt;
+    address public seaport;
 
     /// Declaring Seaport structure objects
     OfferItem[] _offerItem;
     ConsiderationItem[] _considerationItem;
     OrderParameters _orderParameters;
-    Order _order;
+    Order[] _order;
 
     /**
-     * @dev ..
+     * @dev Declare the Seaport address
      */
-    constructor() {
-
+    constructor(address _seaport) {
+        seaport = _seaport;
     }
     
     /**
@@ -41,12 +57,14 @@ contract LiquidationEngine {
          *   uint256 startAmount;
          *   uint256 endAmount;
          */
-        _offerItem = OfferItem(
-            ItemType.ERC721, 
-            msg.sender, 
-            _tokenId, 
-            1, 
-            1
+        _offerItem.push(
+            OfferItem(
+                ItemType.ERC721, 
+                msg.sender, 
+                _tokenId, 
+                1, 
+                1
+            )
         );
 
         /**
@@ -58,13 +76,15 @@ contract LiquidationEngine {
          *   uint256 endAmount;
          *   address payable recipient;
          */
-        _considerationItem = ConsiderationItem(
-            ItemType.NATIVE,
-            address(0),
-            0,
-            150000000000000000000,
-            0,
-            payable(address(this))
+        _considerationItem.push(
+            ConsiderationItem(
+                ItemType.NATIVE,
+                address(0),
+                0,
+                150000000000000000000, // 150 ETH starting -- can be modified to fit
+                0,
+                payable(address(this))
+            )
         );
 
         /**
@@ -88,22 +108,28 @@ contract LiquidationEngine {
             _considerationItem,
             OrderType.FULL_RESTRICTED,
             block.timestamp,
-            block.timestamp + 1 days,
+            block.timestamp + 1 days, // End time: tommorow (in 24)
             bytes32(0),
             globalSalt++,
             bytes32(0),
             1
         );
 
-        // EIP 1271 Signature
-
         /**
          *   ========= Order ==========
          *   struct OrderParameters parameters;
          *   bytes signature;
          */
-        // _order = Order(_orderParameters);
+        _order.push(
+            Order(
+                _orderParameters,
+                bytes("0xffff")
+            )
+        );
 
-        return ERC721TokenReceiver.onERC721Received.selector;
+        bool validation = ConsiderationInterface(seaport).validate(_order);
+        require(validation);
+
+        return LiquidationEngine.onERC721Received.selector;
     }
 }
