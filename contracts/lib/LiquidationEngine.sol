@@ -34,15 +34,29 @@ contract LiquidationEngine {
     Order[] _order;
 
     /**
-     * @dev Declare the Seaport address
+     * @dev Set the contract address of Seaport during deployment.
+     *
+     * @param _seaport The contract address of Seaport.
      */
     constructor(address _seaport) {
         seaport = _seaport;
     }
     
     /**
-    * @dev Executes a Dutch auction for every ERC721 token received using Seaport
-    **/
+     * @dev The interface to properly accept ERC721 tokens. Executes a descending
+     *      Dutch auction for every ERC721 token received using Seaport.
+     *
+     * @param _operator Operator address that transfer the token via
+     *                  IERC721.safeTransferFrom.
+     *
+     * @param _from Address that sends the transfer transaction to the contract.
+     *
+     * @param _tokenId ID of the ERC721 token being transferred.
+     *
+     * @return The Solidity selector to confirm the token transfer. If any other 
+     *         value is returned or the interface is not implemented by the 
+     *         recipient, the transfer will be reverted.
+     */
     function onERC721Received(
         address _operator,
         address _from,
